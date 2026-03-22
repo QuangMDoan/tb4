@@ -1,0 +1,13 @@
+# Build artifacts
+build/
+install/
+log/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Clangd
+.cache/
+.clangd
+compile_commands.json
