@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -e
+
+tb4src() {
+  source /opt/ros/jazzy/setup.bash
+  source ~/turtlebot4_ws/install/setup.bash
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Error: required command '$1' not found."
+    exit 1
+  }
+}
+
+deg_to_rad() {
+  echo "$1 * 3.141592653589793 / 180" | bc -l
+}
+
+usage() {
+  cat <<'EOF'
+Usage:
+  tb4ctl undock
+  tb4ctl dock
+  tb4ctl fwd [distance_m] [speed_mps]
+  tb4ctl back [distance_m] [speed_mps]
+  tb4ctl turn [degrees] [max_rotation_speed]
+  tb4ctl stop
+  tb4ctl square [side_m] [speed_mps]
+
+Examples:
+  tb4ctl undock
+  tb4ctl fwd 0.508 0.08
+  tb4ctl back 0.25 0.08
+  tb4ctl turn 90 1.0
+  tb4ctl turn -90 1.0
+  tb4ctl stop
+  tb4ctl dock
+  tb4ctl square 0.5 0.08
+
+Setup: 
+  mkdir -p ~/bin
+  cp ~/turtlebot4_ws/src/turtlebot4/turtlebot4_navigation/config/tb4ctl ~/bin/tb4ctl
+  chmod +x ~/bin/tb4ctl
+  echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+  source ~/.bashrc
+
+EOF
+}
+
+dock_cmd() {
+  tb4src
+  ros2 action send_goal /dock irobot_create_msgs/action/Dock
+}
+
+undock_cmd() {
+  tb4src
+  ros2 action send_goal /undock irobot_create_msgs/action/Undock
+}
+
+fwd_cmd() {
+  local dist="${1:-0.5}"
+  local speed="${2:-0.1}"
+  tb4src
+  ros2 action send_goal /drive_distance irobot_create_msgs/action/DriveDistance \
+    "{distance: $dist, max_translation_speed: $speed}"
+}
+
+back_cmd() {
+  local dist="${1:-0.5}"
+  local speed="${2:-0.1}"
+  tb4src
+  ros2 action send_goal /drive_distance irobot_create_msgs/action/DriveDistance \
+    "{distance: -$dist, max_translation_speed: $speed}"
+}
+
+turn_cmd() {
+  local deg="${1:-90}"
+  local speed="${2:-1.0}"
+  local rad
+  need_cmd bc
+  rad="$(deg_to_rad "$deg")"
+  tb4src
+  ros2 action send_goal /rotate_angle irobot_create_msgs/action/RotateAngle \
+    "{angle: $rad, max_rotation_speed: $speed}"
+}
+
+stop_cmd() {
+  tb4src
+  ros2 topic pub --once /cmd_vel geometry_msgs/msg/TwistStamped \
+    "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
+}
+
+square_cmd() {
+  local side="${1:-0.5}"
+  local speed="${2:-0.1}"
+  local i
+  for i in 1 2 3 4; do
+    fwd_cmd "$side" "$speed"
+    turn_cmd 90 1.0
+  done
+}
+
+case "${1:-}" in
+  dock)
+    shift
+    dock_cmd "$@"
+    ;;
+  undock)
+    shift
+    undock_cmd "$@"
+    ;;
+  fwd)
+    shift
+    fwd_cmd "$@"
+    ;;
+  back)
+    shift
+    back_cmd "$@"
+    ;;
+  turn)
+    shift
+    turn_cmd "$@"
+    ;;
+  stop)
+    shift
+    stop_cmd "$@"
+    ;;
+  square)
+    shift
+    square_cmd "$@"
+    ;;
+  ""|-h|--help|help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $1"
+    echo
+    usage
+    exit 1
+    ;;
+esac
