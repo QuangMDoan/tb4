@@ -11,3 +11,4 @@ log/
 .cache/
 .clangd
 compile_commands.json
+**/__pycache__
