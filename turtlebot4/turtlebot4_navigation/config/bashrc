@@ -129,3 +129,5 @@ alias ros2_teleop='ros2 run teleop_twist_joy teleop_node --ros-args --params-fil
 alias tb4_slam='ros2 launch turtlebot4_navigation slam.launch.py params:=/home/qd/turtlebot4_ws/src/turtlebot4/turtlebot4_navigation/config/slam.yaml'
 alias tb4_viz='ros2 launch turtlebot4_viz view_navigation.launch.py'
 alias tb4_save_map='ros2 run nav2_map_server map_saver_cli -f map_101 --ros-args -p map_subscribe_transient_local:=true -r __ns:=/'
+alias tb4_localize='ros2 launch turtlebot4_navigation localization.launch.py map:=map_101.yaml'
+alias tb4_nav2='ros2 launch turtlebot4_navigation nav2.launch.py slam:=false'
