@@ -35,16 +35,16 @@ class BatteryMonitor(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    # list of goal poses
-    navigator = TurtleBot4Navigator()
-    pose_1 = navigator.getPoseStamped([-1.1372, -1.9099], TurtleBot4Directions.SOUTH)
-    pose_2 = navigator.getPoseStamped([2.0132, -3.169], TurtleBot4Directions.NORTH)
-    pose_3 = navigator.getPoseStamped([2.448, -0.69], TurtleBot4Directions.NORTH)
 
+    navigator = TurtleBot4Navigator()
+
+    # list of goal poses
     pose_near_dock = navigator.getPoseStamped([-1.0, -1.0], TurtleBot4Directions.WEST)
 
-    goal_poses = [pose_1, pose_2, pose_3]
+    pose_1 = navigator.getPoseStamped([-1.1372, -1.9099], TurtleBot4Directions.SOUTH)
+    pose_2 = pose_near_dock
 
+    goal_poses = [pose_1, pose_2]
     lock = Lock()
     battery_monitor = BatteryMonitor(lock)
 
