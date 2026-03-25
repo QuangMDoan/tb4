@@ -15,15 +15,6 @@ BATTERY_CRITICAL = 0.1  # shutdown
 BATTERY_LOW = 0.2  # go charge
 BATTERY_HIGH = 0.8  # stop charging
 
-# list of goal poses
-navigator = TurtleBot4Navigator()
-pose_1 = navigator.getPoseStamped([-2.0, 2.0], TurtleBot4Directions.EAST)
-pose_2 = navigator.getPoseStamped([-5.0, 1.0], TurtleBot4Directions.NORTH)
-pose_3 = navigator.getPoseStamped([-5.0, 1.0], TurtleBot4Directions.EAST)
-
-pose_near_dock = navigator.getPoseStamped([-1.0, -1.0], TurtleBot4Directions.WEST)
-
-goal_poses = [pose_1, pose_2, pose_3]
 
 class BatteryMonitor(Node):
     
@@ -44,6 +35,16 @@ class BatteryMonitor(Node):
 def main(args=None):
     rclpy.init(args=args)
 
+    # list of goal poses
+    navigator = TurtleBot4Navigator()
+    pose_1 = navigator.getPoseStamped([-1.1372, -1.9099], TurtleBot4Directions.SOUTH)
+    pose_2 = navigator.getPoseStamped([2.0132, -3.169], TurtleBot4Directions.NORTH)
+    pose_3 = navigator.getPoseStamped([2.448, -0.69], TurtleBot4Directions.NORTH)
+
+    pose_near_dock = navigator.getPoseStamped([-1.0, -1.0], TurtleBot4Directions.WEST)
+
+    goal_poses = [pose_1, pose_2, pose_3]
+
     lock = Lock()
     battery_monitor = BatteryMonitor(lock)
 
@@ -58,7 +59,7 @@ def main(args=None):
         navigator.info('Docking before initializing pose')
         navigator.dock()
 
-    start_pose = navigator.getPoseStamped([0, 0], TurtleBot4Directions.WEST)
+    start_pose = navigator.getPoseStamped([0.0, 0.0], TurtleBot4Directions.WEST)
     navigator.setInitialPose(start_pose)
 
     # wait for Nav2
