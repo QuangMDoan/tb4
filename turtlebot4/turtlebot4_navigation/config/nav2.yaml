@@ -36,8 +36,8 @@ controller_server:
     general_goal_checker:
       stateful: true
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.05
-      yaw_goal_tolerance: 0.05
+      xy_goal_tolerance: 0.10
+      yaw_goal_tolerance: 0.10
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
       time_steps: 56
@@ -50,8 +50,8 @@ controller_server:
       vx_std: 0.2
       vy_std: 0.2
       wz_std: 0.4
-      vx_max: 0.5
-      vx_min: -0.35
+      vx_max: 0.26
+      vx_min: -0.26
       vy_max: 0.5
       wz_max: 1.9
       iteration_count: 1
@@ -134,7 +134,7 @@ local_costmap:
       rolling_window: true
       width: 3
       height: 3
-      resolution: 0.01
+      resolution: 0.05
       footprint: "[[ 0.189,  0.000],
                   [ 0.134, -0.134],
                   [ 0.000, -0.189],
@@ -146,8 +146,8 @@ local_costmap:
       plugins: ["static_layer", "voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.05
+        cost_scaling_factor: 3.5
+        inflation_radius: 0.25
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: true
@@ -189,7 +189,7 @@ global_costmap:
                   [-0.134,  0.134],
                   [ 0.000,  0.189],
                   [ 0.134,  0.134]]"
-      resolution: 0.01
+      resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -211,8 +211,8 @@ global_costmap:
         map_subscribe_transient_local: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.05
+        cost_scaling_factor: 3.5
+        inflation_radius: 0.25
       always_send_full_costmap: true
 
 planner_server:
@@ -223,7 +223,7 @@ planner_server:
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.1
-      use_astar: false
+      use_astar: true
       allow_unknown: true
 
 smoother_server:
