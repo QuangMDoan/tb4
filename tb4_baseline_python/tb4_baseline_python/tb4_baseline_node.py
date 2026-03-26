@@ -45,9 +45,9 @@ def main(args=None):
     navigator = TurtleBot4Navigator()
 
     # list of goal poses
-    pose_near_dock = navigator.getPoseStamped([-0.345, -0.352], TurtleBot4Directions.WEST)
+    pose_near_dock = navigator.getPoseStamped([-0.541, -0.242], TurtleBot4Directions.WEST)
 
-    pose_1 = navigator.getPoseStamped([2.362, -1.416], TurtleBot4Directions.EAST)
+    pose_1 = navigator.getPoseStamped([-1.0268, -2.394], TurtleBot4Directions.EAST)
     pose_2 = pose_near_dock
 
     goal_poses = [pose_1, pose_2]
