@@ -3,7 +3,6 @@ set -e
 
 tb4src() {
   source /opt/ros/jazzy/setup.bash
-  source ~/turtlebot4_ws/install/setup.bash
 }
 
 need_cmd() {
@@ -26,6 +25,7 @@ Usage:
   tb4ctl back [distance_m] [speed_mps]
   tb4ctl turn [degrees] [max_rotation_speed]
   tb4ctl stop
+  tb4ctl chk_power_save
   tb4ctl square [side_m] [speed_mps]
 
 Examples:
@@ -51,6 +51,8 @@ EOF
 dock_cmd() {
   tb4src
   ros2 action send_goal /dock irobot_create_msgs/action/Dock
+  # Stop the RPLIDAR motor after docking (in case power_saver is off)
+  ros2 service call /stop_motor std_srvs/srv/Empty
 }
 
 undock_cmd() {
@@ -91,6 +93,11 @@ stop_cmd() {
     "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
 }
 
+chk_power_save_cmd() {
+  tb4src
+  ros2 param get /turtlebot4_node power_saver
+}
+
 square_cmd() {
   local side="${1:-0.5}"
   local speed="${2:-0.1}"
@@ -125,6 +132,10 @@ case "${1:-}" in
   stop)
     shift
     stop_cmd "$@"
+    ;;
+  chk_power_save)
+    shift
+    chk_power_save_cmd "$@"
     ;;
   square)
     shift
