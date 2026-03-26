@@ -15,37 +15,41 @@ deg_to_rad() {
 usage() {
   cat <<'EOF'
 Usage:
-  tb4ctl undock
-  tb4ctl dock
-  tb4ctl fwd [distance_m] [speed_mps]
-  tb4ctl back [distance_m] [speed_mps]
-  tb4ctl turn [degrees] [max_rotation_speed]
-  tb4ctl stop
-  tb4ctl chk_power_save
-  tb4ctl restart
-  tb4ctl status
-  tb4ctl off
-  tb4ctl baseline1
-  tb4ctl square [side_m] [speed_mps]
+  tb4 undock
+  tb4 dock
+  tb4 fwd [distance_m] [speed_mps]
+  tb4 back [distance_m] [speed_mps]
+  tb4 turn [degrees] [max_rotation_speed]
+  tb4 stop
+  tb4 stop_lidar
+  tb4 start_lidar
+  tb4 chk_power_save
+  tb4 restart
+  tb4 status
+  tb4 off
+  tb4 baseline1
+  tb4 square [side_m] [speed_mps]
 
 Examples:
-  tb4ctl undock
-  tb4ctl fwd 0.508 0.08
-  tb4ctl back 0.25 0.08
-  tb4ctl turn 90 1.0
-  tb4ctl turn -90 1.0
-  tb4ctl stop
-  tb4ctl dock
-  tb4ctl square 0.5 0.08
-  tb4ctl restart
-  tb4ctl status
-  tb4ctl off
-  tb4ctl baseline1
+  tb4 undock
+  tb4 fwd 0.508 0.08
+  tb4 back 0.25 0.08
+  tb4 turn 90 1.0
+  tb4 turn -90 1.0
+  tb4 stop
+  tb4 stop_lidar
+  tb4 start_lidar
+  tb4 dock
+  tb4 square 0.5 0.08
+  tb4 restart
+  tb4 status
+  tb4 off
+  tb4 baseline1
 
 Setup: 
   mkdir -p ~/bin
-  cp ~/turtlebot4_ws/src/turtlebot4/turtlebot4_navigation/config/tb4ctl ~/bin/tb4ctl
-  chmod +x ~/bin/tb4ctl
+  cp ~/turtlebot4_ws/src/turtlebot4/turtlebot4_navigation/config/tb4 ~/bin/tb4
+  chmod +x ~/bin/tb4
   echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
   source ~/.bashrc
 
@@ -54,14 +58,10 @@ EOF
 
 dock_cmd() {
   ros2 action send_goal /dock irobot_create_msgs/action/Dock
-  # Stop the RPLIDAR motor after docking (in case power_saver is off)
-  ros2 service call /stop_motor std_srvs/srv/Empty
 }
 
 undock_cmd() {
   ros2 action send_goal /undock irobot_create_msgs/action/Undock
-  # Start the RPLIDAR motor after undocking
-  ros2 service call /start_motor std_srvs/srv/Empty
 }
 
 fwd_cmd() {
@@ -91,6 +91,14 @@ turn_cmd() {
 stop_cmd() {
   ros2 topic pub --once /cmd_vel geometry_msgs/msg/TwistStamped \
     "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
+}
+
+stop_lidar_cmd() {
+  ros2 service call /stop_motor std_srvs/srv/Empty
+}
+
+start_lidar_cmd() {
+  ros2 service call /start_motor std_srvs/srv/Empty
 }
 
 chk_power_save_cmd() {
@@ -147,6 +155,14 @@ case "${1:-}" in
   stop)
     shift
     stop_cmd "$@"
+    ;;
+  stop_lidar)
+    shift
+    stop_lidar_cmd "$@"
+    ;;
+  start_lidar)
+    shift
+    start_lidar_cmd "$@"
     ;;
   chk_power_save)
     shift
