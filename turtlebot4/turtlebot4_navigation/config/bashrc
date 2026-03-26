@@ -119,9 +119,10 @@ fi
 export PATH="$HOME/bin:$PATH"
 alias gz2='gz sim --render-engine ogre'
 source /opt/ros/jazzy/setup.bash
-
 source /etc/turtlebot4_discovery/setup.bash
-source ~/turtlebot4_ws/install/setup.bash
+
+# source ~/turtlebot4_ws/install/setup.bash
+source ~/turtlebot4_ws/install/local_setup.bash
 
 alias tb4_log='ssh ubuntu@turtlebot4'
 alias tb4_point='ros2 topic echo /clicked_point'
@@ -133,3 +134,6 @@ alias tb4_viz='ros2 launch turtlebot4_viz view_navigation.launch.py'
 alias tb4_save_map='ros2 run nav2_map_server map_saver_cli -f /home/qd/turtlebot4_ws/map_101 --ros-args -p map_subscribe_transient_local:=true -r __ns:=/'
 alias tb4_localize='ros2 launch turtlebot4_navigation localization.launch.py map:=/home/qd/turtlebot4_ws/map_101.yaml'
 alias tb4_nav2='ros2 launch turtlebot4_navigation nav2.launch.py slam:=false'
+alias check_lidar="ros2 service list 2>&1 | grep -i -E \"rplidar|motor|lidar|start|stop\""
+alias start_lidar_motor="ros2 service call /start_motor std_srvs/srv/Empty"
+alias tb4_chk_scan="ros2 topic hz /scan --window 5 2>&1 | head -5"
