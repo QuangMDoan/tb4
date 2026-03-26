@@ -24,7 +24,7 @@ Usage:
   tb4ctl chk_power_save
   tb4ctl restart
   tb4ctl status
-  tb4ctl reboot
+  tb4ctl off
   tb4ctl baseline1
   tb4ctl square [side_m] [speed_mps]
 
@@ -39,7 +39,7 @@ Examples:
   tb4ctl square 0.5 0.08
   tb4ctl restart
   tb4ctl status
-  tb4ctl reboot
+  tb4ctl off
   tb4ctl baseline1
 
 Setup: 
@@ -98,14 +98,14 @@ chk_power_save_cmd() {
 }
 
 restart_cmd() {
-  sudo systemctl restart turtlebot4.service
+  ssh -t ubuntu@turtlebot4 'systemctl restart turtlebot4.service'
 }
 
 status_cmd() {
-  sudo systemctl status turtlebot4.service
+  ssh -t ubuntu@turtlebot4 'systemctl status turtlebot4.service'
 }
 
-reboot_cmd() {
+off_cmd() {
   ros2 service call /robot_power irobot_create_msgs/srv/RobotPower "{}"
 }
 
@@ -160,9 +160,9 @@ case "${1:-}" in
     shift
     status_cmd "$@"
     ;;
-  reboot)
+  off)
     shift
-    reboot_cmd "$@"
+    off_cmd "$@"
     ;;
   baseline1)
     shift

@@ -16,6 +16,12 @@ BATTERY_LOW = 0.2  # go charge
 BATTERY_HIGH = 0.8  # stop charging
 
 
+def restamp(navigator, pose):
+    """Return a copy of pose with a fresh timestamp."""
+    pose.header.stamp = navigator.get_clock().now().to_msg()
+    return pose
+
+
 class BatteryMonitor(Node):
     
     def __init__(self, lock: Lock):        
@@ -66,7 +72,8 @@ def main(args=None):
     navigator.waitUntilNav2Active()
 
     # undock
-    navigator.undock()
+    if navigator.getDockedStatus():
+        navigator.undock()
 
     while True:
         with lock:
@@ -80,7 +87,7 @@ def main(args=None):
                 break
             elif battery_pct < BATTERY_LOW:
                 navigator.info('Docking for charge')
-                navigator.startToPose(pose_near_dock)
+                navigator.startToPose(restamp(navigator, pose_near_dock))
                 navigator.dock()
 
                 if not navigator.getDockedStatus():
@@ -101,13 +108,13 @@ def main(args=None):
                     if battery_pct > (battery_pct_prev + 0.01):
                         navigator.info(f'Battery is at {(battery_pct*100):.2f}% charge')
                 
-                navigator.undock() # undock and continue to next goal
+                navigator.undock() if navigator.getDockedStatus() else None  # undock and continue to next goal
             else:
                 if position_index >= len(goal_poses):
                     position_index = 0
 
                 navigator.info(f'Moving to goal pose {position_index+1}...')
-                navigator.startToPose(goal_poses[position_index])
+                navigator.startToPose(restamp(navigator, goal_poses[position_index]))
                 position_index += 1
 
     battery_monitor.destroy_node()
