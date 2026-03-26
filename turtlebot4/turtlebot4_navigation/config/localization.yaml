@@ -43,4 +43,9 @@ map_saver:
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
+
+lifecycle_manager_localization:
+  ros__parameters:
+    autostart: true
+    bond_timeout: 10.0
     map_subscribe_transient_local: true
