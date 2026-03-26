@@ -77,9 +77,9 @@ def generate_launch_description():
                 launch_arguments=[('model', 'standard'),
                                   ('param_file', namespaced_param_file)]),
 
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource([joy_teleop_launch_file]),
-                launch_arguments=[('namespace', namespace)]),
+#            IncludeLaunchDescription(
+#                PythonLaunchDescriptionSource([joy_teleop_launch_file]),
+#                launch_arguments=[('namespace', namespace)]),
 
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([rplidar_launch_file])),
