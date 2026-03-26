@@ -39,9 +39,9 @@ def main(args=None):
     navigator = TurtleBot4Navigator()
 
     # list of goal poses
-    pose_near_dock = navigator.getPoseStamped([-1.0, -1.0], TurtleBot4Directions.WEST)
+    pose_near_dock = navigator.getPoseStamped([-0.345, -0.352], TurtleBot4Directions.WEST)
 
-    pose_1 = navigator.getPoseStamped([-1.1372, -1.9099], TurtleBot4Directions.SOUTH)
+    pose_1 = navigator.getPoseStamped([2.362, -1.416], TurtleBot4Directions.EAST)
     pose_2 = pose_near_dock
 
     goal_poses = [pose_1, pose_2]
@@ -59,7 +59,7 @@ def main(args=None):
         navigator.info('Docking before initializing pose')
         navigator.dock()
 
-    start_pose = navigator.getPoseStamped([0.0, 0.0], TurtleBot4Directions.WEST)
+    start_pose = navigator.getPoseStamped([0.0, 0.0], TurtleBot4Directions.SOUTH)
     navigator.setInitialPose(start_pose)
 
     # wait for Nav2

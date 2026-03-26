@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-tb4src() {
-  source /opt/ros/jazzy/setup.bash
-}
-
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
     echo "Error: required command '$1' not found."
@@ -29,6 +25,7 @@ Usage:
   tb4ctl restart
   tb4ctl status
   tb4ctl reboot
+  tb4ctl baseline1
   tb4ctl square [side_m] [speed_mps]
 
 Examples:
@@ -43,6 +40,7 @@ Examples:
   tb4ctl restart
   tb4ctl status
   tb4ctl reboot
+  tb4ctl baseline1
 
 Setup: 
   mkdir -p ~/bin
@@ -55,14 +53,12 @@ EOF
 }
 
 dock_cmd() {
-  tb4src
   ros2 action send_goal /dock irobot_create_msgs/action/Dock
   # Stop the RPLIDAR motor after docking (in case power_saver is off)
   ros2 service call /stop_motor std_srvs/srv/Empty
 }
 
 undock_cmd() {
-  tb4src
   ros2 action send_goal /undock irobot_create_msgs/action/Undock
   # Start the RPLIDAR motor after undocking
   ros2 service call /start_motor std_srvs/srv/Empty
@@ -71,7 +67,6 @@ undock_cmd() {
 fwd_cmd() {
   local dist="${1:-0.5}"
   local speed="${2:-0.1}"
-  tb4src
   ros2 action send_goal /drive_distance irobot_create_msgs/action/DriveDistance \
     "{distance: $dist, max_translation_speed: $speed}"
 }
@@ -79,7 +74,6 @@ fwd_cmd() {
 back_cmd() {
   local dist="${1:-0.5}"
   local speed="${2:-0.1}"
-  tb4src
   ros2 action send_goal /drive_distance irobot_create_msgs/action/DriveDistance \
     "{distance: -$dist, max_translation_speed: $speed}"
 }
@@ -90,19 +84,16 @@ turn_cmd() {
   local rad
   need_cmd bc
   rad="$(deg_to_rad "$deg")"
-  tb4src
   ros2 action send_goal /rotate_angle irobot_create_msgs/action/RotateAngle \
     "{angle: $rad, max_rotation_speed: $speed}"
 }
 
 stop_cmd() {
-  tb4src
   ros2 topic pub --once /cmd_vel geometry_msgs/msg/TwistStamped \
     "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
 }
 
 chk_power_save_cmd() {
-  tb4src
   ros2 param get /turtlebot4_node power_saver
 }
 
@@ -115,8 +106,11 @@ status_cmd() {
 }
 
 reboot_cmd() {
-  tb4src
   ros2 service call /robot_power irobot_create_msgs/srv/RobotPower "{}"
+}
+
+baseline1_cmd() {
+  ros2 run tb4_baseline_python tb4_baseline_node
 }
 
 square_cmd() {
@@ -169,6 +163,10 @@ case "${1:-}" in
   reboot)
     shift
     reboot_cmd "$@"
+    ;;
+  baseline1)
+    shift
+    baseline1_cmd "$@"
     ;;
   square)
     shift
