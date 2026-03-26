@@ -26,6 +26,9 @@ Usage:
   tb4ctl turn [degrees] [max_rotation_speed]
   tb4ctl stop
   tb4ctl chk_power_save
+  tb4ctl restart
+  tb4ctl status
+  tb4ctl reboot
   tb4ctl square [side_m] [speed_mps]
 
 Examples:
@@ -37,6 +40,9 @@ Examples:
   tb4ctl stop
   tb4ctl dock
   tb4ctl square 0.5 0.08
+  tb4ctl restart
+  tb4ctl status
+  tb4ctl reboot
 
 Setup: 
   mkdir -p ~/bin
@@ -58,6 +64,8 @@ dock_cmd() {
 undock_cmd() {
   tb4src
   ros2 action send_goal /undock irobot_create_msgs/action/Undock
+  # Start the RPLIDAR motor after undocking
+  ros2 service call /start_motor std_srvs/srv/Empty
 }
 
 fwd_cmd() {
@@ -98,6 +106,19 @@ chk_power_save_cmd() {
   ros2 param get /turtlebot4_node power_saver
 }
 
+restart_cmd() {
+  sudo systemctl restart turtlebot4.service
+}
+
+status_cmd() {
+  sudo systemctl status turtlebot4.service
+}
+
+reboot_cmd() {
+  tb4src
+  ros2 service call /robot_power irobot_create_msgs/srv/RobotPower "{}"
+}
+
 square_cmd() {
   local side="${1:-0.5}"
   local speed="${2:-0.1}"
@@ -136,6 +157,18 @@ case "${1:-}" in
   chk_power_save)
     shift
     chk_power_save_cmd "$@"
+    ;;
+  restart)
+    shift
+    restart_cmd "$@"
+    ;;
+  status)
+    shift
+    status_cmd "$@"
+    ;;
+  reboot)
+    shift
+    reboot_cmd "$@"
     ;;
   square)
     shift
