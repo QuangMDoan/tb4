@@ -1,0 +1,16 @@
+# YoloDetectorNode parameters
+yolo_detector_node:
+  ros__parameters:
+    model_path: 'yolov8n.pt'
+    confidence_threshold: 0.7
+    image_topic: '/oakd/rgb/preview/image_raw'
+    detection_topic: '/detections'
+    device: 'cpu'
+    publish_rate_limit: 12.0
+    target_classes:
+      - 'person'
+      - 'stop sign'
+      - 'chair'
+      - 'dog'
+      - 'cat'
+      - 'bicycle'
