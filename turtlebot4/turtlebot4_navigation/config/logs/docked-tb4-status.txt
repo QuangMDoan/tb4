@@ -1,0 +1,42 @@
+qd@r16q8:~/turtlebot4_ws$ tb4 dock
+Waiting for an action server to become available...
+Sending goal:
+     {}
+
+Goal accepted with ID: 418c75d4e72549538c49a6317d5f10b1
+
+Result:
+    is_docked: true
+
+Goal finished with status: SUCCEEDED
+
+qd@r16q8:~/turtlebot4_ws$ tb4 status
+● turtlebot4.service - "bringup turtlebot4"
+     Loaded: loaded (/usr/lib/systemd/system/turtlebot4.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-03-13 09:51:44 PDT; 3 weeks 1 day ago
+   Main PID: 1128 (turtlebot4-star)
+      Tasks: 138 (limit: 4387)
+     Memory: 423.5M (peak: 424.3M)
+        CPU: 4min 31.878s
+     CGroup: /system.slice/turtlebot4.service
+             ├─1128 /bin/bash /usr/sbin/turtlebot4-start
+             ├─1365 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch /tmp/turtlebot4.launch.py
+             ├─1383 /opt/ros/jazzy/lib/turtlebot4_node/turtlebot4_node --ros-args -r __ns:=/ --params-file /tmp/tmp131p7fxj --params-file /tmp/launch_params_x32zgegt
+             ├─1384 /opt/ros/jazzy/lib/turtlebot4_base/turtlebot4_base_node --ros-args -r __ns:=/ --params-file /tmp/tmp131p7fxj
+             ├─1385 /opt/ros/jazzy/lib/create3_republisher/create3_republisher --ros-args -r __ns:=/ --params-file /opt/ros/jazzy/share/turtlebot4_bringup/config/republisher.yaml --params-file /tmp/launch_params_92aq8has -r cmd_vel:=cmd_vel_unstam>
+             ├─1386 /opt/ros/jazzy/lib/rplidar_ros/rplidar_composition --ros-args -r __node:=rplidar_composition -r __ns:=/ --params-file /tmp/launch_params_oetyy0fn
+             ├─1387 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher -r __ns:=/ --params-file /tmp/launch_params_8y9dynel --params-file /tmp/launch_params_wb4yrac6 -r /tf:=tf -r /tf_static:>
+             ├─1388 /usr/bin/python3 /opt/ros/jazzy/lib/joint_state_publisher/joint_state_publisher --ros-args -r __node:=joint_state_publisher -r __ns:=/ --params-file /tmp/launch_params__8djoqjf -r /tf:=tf -r /tf_static:=tf_static
+             └─1511 /opt/ros/jazzy/lib/rclcpp_components/component_container --ros-args -r __node:=oakd_container -r __ns:=/
+
+Apr 05 02:45:12 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382312.510813844] [turtlebot4_node]: OAKD stopped
+Apr 05 02:45:12 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382312.511027914] [turtlebot4_node]: RPLIDAR stopped
+Apr 05 02:45:13 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382313.511571659] [turtlebot4_node]: stop_motor service available, sending request
+Apr 05 02:45:13 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382313.512454162] [turtlebot4_node]: oakd/stop_camera service available, sending request
+Apr 05 02:45:13 turtlebot4 turtlebot4-start[1365]: [component_container-7] [INFO] [1775382313.513546752] [oakd]: Stopping camera.
+Apr 05 02:45:13 turtlebot4 turtlebot4-start[1365]: [rplidar_composition-4] [INFO] [1775382313.736155724] [rplidar_composition]: Stop
+Apr 05 02:45:14 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382314.250400161] [turtlebot4_node]: stop_motor service completed.
+Apr 05 02:45:14 turtlebot4 turtlebot4-start[1365]: [create3_republisher-3] Action request _do_not_use/dock SUCCESS received from the robot
+Apr 05 02:45:15 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382315.684897097] [turtlebot4_node]: oakd/stop_camera service got results: Success
+Apr 05 02:45:15 turtlebot4 turtlebot4-start[1365]: [turtlebot4_node-1] [INFO] [1775382315.685098204] [turtlebot4_node]:
+lines 1-28/28 (END)

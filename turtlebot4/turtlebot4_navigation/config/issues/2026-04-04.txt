@@ -1,0 +1,114 @@
+Two issues here:
+1) Rate dropped from 30 Hz -> ~8 Hz again when YOLO + fusion are running 
+    Bandwidth saturation from multiple image streams over WiFi
+
+2) point_cloud_xyz_node can't sync 
+    receives 0 image messages but gets camera_info (small messages flow, large images don't)
+
+3) check:     ros2 topic info /oakd/stereo/image_raw -v 2>&1 
+    See appendix 1
+
+4) Root causes:
+    - running the depth_to_pointcloud node on PC forces ~15 MB/s of raw depth images over WiFi. 
+    - Combined with the RGB preview for YOLO -> saturating the link
+
+5) Solutions 
+
+    - Run point_cloud_xyz_node on the robot so depth-->pointcloud conversion happens locally 
+        and only the smaller PointCloud2 flows over the network. 
+        
+    - Alternatively, use compressed image transport
+
+6) Implementation (2026-04-04)
+    Switch to compressed image transport in the launch file 
+    - easier, keeps everything on Ubuntu PC
+
+    IF "switch to compressed image transport" not working then:
+
+    a) Move depth_to_pointcloud to the robot. depth stays local on Pi, only PointCloud2 goes over WiFi (~2 MB/s vs ~15 MB/s for raw depth images). 
+        -Best for bandwidth but adds Pi CPU load
+    
+    b) Run everything on the robot. YOLO inference a Pi
+
+7) Appendix 1:
+
+Type: sensor_msgs/msg/Image
+
+Publisher count: 4
+
+Node name: oakd
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Topic type hash: RIHS01_d31d41a9a4c4bc8eae9be757b0beed306564f7526c88ea6a4588fb9582527d47
+Endpoint type: PUBLISHER
+GID: 01.0f.4a.4a.06.15.41.ca.00.00.00.00.00.00.2f.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: oakd
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Topic type hash: RIHS01_d31d41a9a4c4bc8eae9be757b0beed306564f7526c88ea6a4588fb9582527d47
+Endpoint type: PUBLISHER
+GID: 01.0f.4a.4a.51.06.89.59.00.00.00.00.00.00.2f.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: oakd
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Topic type hash: RIHS01_d31d41a9a4c4bc8eae9be757b0beed306564f7526c88ea6a4588fb9582527d47
+Endpoint type: PUBLISHER
+GID: 01.0f.4a.4a.9c.09.e0.6c.00.00.00.00.00.00.2f.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: oakd
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Topic type hash: RIHS01_d31d41a9a4c4bc8eae9be757b0beed306564f7526c88ea6a4588fb9582527d47
+Endpoint type: PUBLISHER
+GID: 01.0f.4a.4a.e6.05.35.09.00.00.00.00.00.00.50.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: depth_to_pointcloud
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Topic type hash: RIHS01_d31d41a9a4c4bc8eae9be757b0beed306564f7526c88ea6a4588fb9582527d47
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.be.ea.30.5e.06.85.00.00.00.00.00.00.15.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite

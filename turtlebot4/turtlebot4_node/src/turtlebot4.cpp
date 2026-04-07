@@ -363,7 +363,12 @@ void Turtlebot4::battery_callback(const sensor_msgs::msg::BatteryState::SharedPt
       }
     }
   } else if (battery_state_msg->percentage <= 0.2) {
-    low_battery_animation();
+    // Rate-limit low battery animation to once per 60 seconds
+    auto now = this->get_clock()->now();
+    if ((now - last_low_battery_animation_time_).seconds() > 60.0) {
+      low_battery_animation();
+      last_low_battery_animation_time_ = now;
+    }
   }
 
   // Set Battery LED on standard robots

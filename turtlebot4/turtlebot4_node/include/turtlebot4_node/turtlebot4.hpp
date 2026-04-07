@@ -166,6 +166,7 @@ private:
   std::unique_ptr<Turtlebot4Action<Undock>> undock_client_;
   std::unique_ptr<Turtlebot4Action<WallFollow>> wall_follow_client_;
   std::unique_ptr<Turtlebot4Action<LedAnimation>> led_animation_client_;
+  rclcpp::Time last_low_battery_animation_time_{0, 0, RCL_ROS_TIME};
 
   // Services
   std::unique_ptr<Turtlebot4Service<EStop>> estop_client_;

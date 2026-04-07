@@ -1,0 +1,66 @@
+# build turtlebot4_node on Raspberry Pi
+
+1) Copy source to Pi:
+scp -r ~/turtlebot4_ws/src/turtlebot4/turtlebot4_node ubuntu@turtlebot4:/tmp/turtlebot4_node
+
+2) Build turtlebot4_node on Pi
+
+ssh -t ubuntu@turtlebot4 "source /opt/ros/jazzy/setup.bash && mkdir -p /tmp/tb4_build_ws/src && cp -r /tmp/turtlebot4_node /tmp/tb4_build_ws/src/ && cd /tmp/tb4_build_ws && colcon build --packages-select turtlebot4_node 2>&1 | tail -20"
+
+>> No C++ compiler on the Pi. 
+
+
+3) Install compiler on Pi
+
+ssh -t ubuntu@turtlebot4 "sudo apt-get update -qq && sudo apt-get install -y -qq g++ cmake 2>&1 | tail -10"
+
+>> The GPG warning is just a stale key — apt still installed from cache. 
+
+4) Retry the build
+
+ssh -t ubuntu@turtlebot4 "source /opt/ros/jazzy/setup.bash && cd /tmp/tb4_build_ws && colcon build --packages-select turtlebot4_node 2>&1 | tail -20"
+
+>> Missing catkin_pkg Python module
+
+5) Install catkin_pkg on Pi
+
+Attempt1: 
+    ssh -t ubuntu@turtlebot4 "sudo pip3 install catkin-pkg --break-system-packages 2>&1 | tail -5"
+
+Attempt2: 
+    ssh -t ubuntu@turtlebot4 "sudo apt-get install -y -qq python3-catkin-pkg 2>&1 | tail -5"
+    ssh -t ubuntu@turtlebot4 "sudo apt-get install -y     python3-catkin-pkg 2>&1 && echo INSTALL_DONE"
+
+    >> catkin_pkg is installed but colcon can't find it. The issue is likely a Python path conflict. check and try building with the module path fixed:
+
+Attempt3:
+    ssh -t ubuntu@turtlebot4 "source /opt/ros/jazzy/setup.bash && python3 -c 'import catkin_pkg; print(catkin_pkg.__file__)' && cd /tmp/tb4_build_ws && colcon build --packages-select turtlebot4_node 2>&1 | tail -20"
+
+    >>  ModuleNotFoundError: No module named 'catkin_pkg.package'
+
+Attempt4:
+    ssh -t ubuntu@turtlebot4 "sudo apt-get install --reinstall -y python3-catkin-pkg-modules python3-catkin-pkg 2>&1 | tail -10"
+
+    >> The ROS apt repo is broken (expired GPG key + 404s)
+
+Attempt5:
+    ssh -t ubuntu@turtlebot4 "sudo apt-get install -y python3-pip 2>&1 | tail -3 && sudo python3 -m pip install --force-reinstall catkin-pkg --break-system-packages 2>&1 | tail -5 && python3 -c 'from catkin_pkg.package import parse_package_string; print(\"catkin_pkg OK\")'"
+
+    >> Pip failed because pyparsing (a dependency) is system-managed
+
+
+Attempt6: work around it:
+    ssh -t ubuntu@turtlebot4 "sudo python3 -m pip install --force-reinstall --no-deps catkin-pkg --break-system-packages 2>&1 | tail -5 && python3 -c 'from catkin_pkg.package import parse_package_string; print(\"catkin_pkg OK\")'"
+
+    >> catkin_pkg OK
+
+6) catkin_pkg is working now. Retry the build
+
+    ssh -t ubuntu@turtlebot4 "source /opt/ros/jazzy/setup.bash && cd /tmp/tb4_build_ws && colcon build --packages-select turtlebot4_node 2>&1 | tail -20"
+
+    >> Starting >>> turtlebot4_node
+    >> Finished <<< turtlebot4_node [2min 52s]
+    >> Summary: 1 package finished [2min 53s]
+
+7) Build succeeded. Install it and restart the service:
+    ssh -t ubuntu@turtlebot4 "sudo cp /tmp/tb4_build_ws/install/turtlebot4_node/lib/turtlebot4_node/turtlebot4_node /opt/ros/jazzy/lib/turtlebot4_node/turtlebot4_node && sudo systemctl restart turtlebot4.service && echo DONE"

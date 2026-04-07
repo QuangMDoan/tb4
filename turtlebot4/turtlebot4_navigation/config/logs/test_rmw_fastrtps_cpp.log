@@ -1,0 +1,247 @@
+==============================
+Testing RMW: rmw_fastrtps_cpp
+Time: Thu Apr  2 07:03:34 AM PDT 2026
+==============================
+[INFO] Using RMW: rmw_fastrtps_cpp
+
+[TEST] Topic list:
+/battery_state
+/cmd_audio
+/cmd_lightring
+/cmd_vel
+/cmd_vel_unstamped
+/diagnostics
+/dock_status
+/function_calls
+/hmi/buttons
+/hmi/display
+/hmi/display/message
+/hmi/led
+/imu
+/interface_buttons
+/ip
+/joint_states
+/joy
+/odom
+/parameter_events
+/robot_description
+/rosout
+/scan
+/tf
+/tf_static
+/wheel_status
+
+[TEST] Topic count:
+25
+
+[TEST] /scan frequency (5s):
+average rate: 7.621
+	min: 0.081s max: 0.178s std dev: 0.03161s window: 9
+average rate: 7.238
+	min: 0.048s max: 0.244s std dev: 0.04929s window: 16
+average rate: 7.420
+	min: 0.027s max: 0.244s std dev: 0.05722s window: 24
+
+[TEST] Echo /odom once:
+A message was lost!!!
+	total count change:1
+	total count: 1---
+header:
+  stamp:
+    sec: 1775138626
+    nanosec: 308715171
+  frame_id: odom
+child_frame_id: base_link
+pose:
+  pose:
+    position:
+      x: -0.06419264525175095
+      y: 0.04014529660344124
+      z: -0.0021761078387498856
+    orientation:
+      x: -0.007675684057176113
+      y: -0.0003638597554527223
+      z: 0.999951958656311
+      w: 0.006086513865739107
+  covariance:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+twist:
+  twist:
+    linear:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    angular:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+  covariance:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+---
+
+[TEST] Echo /tf once:
+Some, but not all, publishers are offering QoSDurabilityPolicy.TRANSIENT_LOCAL. Falling back to QoSDurabilityPolicy.VOLATILE as it will connect to all publishers
+transforms:
+- header:
+    stamp:
+      sec: 1775138627
+      nanosec: 454695874
+    frame_id: wheel_drop_left
+  child_frame_id: left_wheel
+  transform:
+    translation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+- header:
+    stamp:
+      sec: 1775138627
+      nanosec: 454695874
+    frame_id: wheel_drop_right
+  child_frame_id: right_wheel
+  transform:
+    translation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    rotation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+- header:
+    stamp:
+      sec: 1775138627
+      nanosec: 454695874
+    frame_id: base_link
+  child_frame_id: wheel_drop_left
+  transform:
+    translation:
+      x: 0.0
+      y: 0.1165
+      z: 0.04020000000000001
+    rotation:
+      x: -0.7071067811865475
+      y: 0.0
+      z: 0.0
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1775138627
+      nanosec: 454695874
+    frame_id: base_link
+  child_frame_id: wheel_drop_right
+  transform:
+    translation:
+      x: 0.0
+      y: -0.1165
+      z: 0.04020000000000001
+    rotation:
+      x: -0.7071067811865475
+      y: 0.0
+      z: 0.0
+      w: 0.7071067811865476
+---
+
+[TEST] Echo /map once:
+WARNING: topic [/map] does not appear to be published yet
+
+[TEST] Actions:
+/_do_not_use/audio_note_sequence
+/_do_not_use/dock
+/_do_not_use/drive_arc
+/_do_not_use/drive_distance
+/_do_not_use/led_animation
+/_do_not_use/navigate_to_position
+/_do_not_use/rotate_angle
+/_do_not_use/undock
+/_do_not_use/wall_follow
+/audio_note_sequence
+/dock
+/drive_arc
+/drive_distance
+/led_animation
+/navigate_to_position
+/rotate_angle
+/undock
+/wall_follow
+
+[TEST] Nav2 services:
+
+[RESULT] Completed test for rmw_fastrtps_cpp
+

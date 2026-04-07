@@ -21,13 +21,27 @@ Usage:
   tb4 back [distance_m] [speed_mps]
   tb4 turn [degrees] [max_rotation_speed]
   tb4 stop
-  tb4 stop_lidar
-  tb4 start_lidar
-  tb4 chk_power_save
+  tb4 stop svc
+  tb4 start svc
   tb4 restart
+  tb4 reboot
   tb4 status
+  tb4 login
   tb4 off
-  tb4 baseline1
+  tb4 yolo
+  tb4 yolo viz
+  tb4 fusion
+  tb4 fusion viz
+  tb4 rgb_cam_rate
+  tb4 bbox_rate
+  tb4 depth_cam_rate
+  tb4 robot_depth_cam_rate
+  tb4 pointcloud_topic
+  tb4 cam_info_topic
+  tb4 obstacles
+  tb4 battery
+  tb4 clicked_point
+  tb4 cat <remote_file_path>
   tb4 square [side_m] [speed_mps]
 
 Examples:
@@ -37,14 +51,29 @@ Examples:
   tb4 turn 90 1.0
   tb4 turn -90 1.0
   tb4 stop
-  tb4 stop_lidar
-  tb4 start_lidar
+  tb4 stop svc
+  tb4 start svc
+  tb4 restart
   tb4 dock
   tb4 square 0.5 0.08
-  tb4 restart
+  tb4 reboot
   tb4 status
+  tb4 login
   tb4 off
-  tb4 baseline1
+  tb4 yolo
+  tb4 yolo viz
+  tb4 fusion
+  tb4 fusion viz
+  tb4 rgb_cam_rate
+  tb4 bbox_rate
+  tb4 depth_cam_rate
+  tb4 robot_depth_cam_rate
+  tb4 pointcloud_topic
+  tb4 cam_info_topic
+  tb4 obstacles
+  tb4 battery
+  tb4 clicked_point
+  tb4 cat /opt/ros/jazzy/share/turtlebot4_bringup/config/oakd_pro.yaml
 
 Setup: 
   mkdir -p ~/bin
@@ -93,32 +122,94 @@ stop_cmd() {
     "{header: {frame_id: 'base_link'}, twist: {linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}}"
 }
 
-stop_lidar_cmd() {
-  ros2 service call /stop_motor std_srvs/srv/Empty
+stop_svc_cmd() {
+  ssh -t ubuntu@turtlebot4 'sudo systemctl stop turtlebot4.service'
 }
 
-start_lidar_cmd() {
-  ros2 service call /start_motor std_srvs/srv/Empty
-}
-
-chk_power_save_cmd() {
-  ros2 param get /turtlebot4_node power_saver
+start_svc_cmd() {
+  ssh -t ubuntu@turtlebot4 'sudo systemctl start turtlebot4.service'
 }
 
 restart_cmd() {
-  ssh -t ubuntu@turtlebot4 'systemctl restart turtlebot4.service'
+  ssh -t ubuntu@turtlebot4 'sudo systemctl restart turtlebot4.service'
+}
+
+reboot_cmd() {
+  ssh -t ubuntu@turtlebot4 'sudo reboot'
 }
 
 status_cmd() {
   ssh -t ubuntu@turtlebot4 'systemctl status turtlebot4.service'
 }
 
+login_cmd() {
+  ssh ubuntu@turtlebot4
+}
+
 off_cmd() {
   ros2 service call /robot_power irobot_create_msgs/srv/RobotPower "{}"
 }
 
-baseline1_cmd() {
-  ros2 run tb4_baseline_python tb4_baseline_node
+yolo_cmd() {
+  if [ "${1:-}" = "viz" ]; then
+    ros2 launch tb4_perception yolo_detector.launch.py publish_visualisation:=true
+  else
+    ros2 launch tb4_perception yolo_detector.launch.py publish_visualisation:=false
+  fi
+}
+
+fusion_cmd() {
+  if [ "${1:-}" = "viz" ]; then
+    ros2 launch tb4_perception_integration perception_integration.launch.py publish_debug_markers:=true
+  else
+    ros2 launch tb4_perception_integration perception_integration.launch.py
+  fi
+}
+
+rgb_cam_rate_cmd() {
+  timeout 8 ros2 topic hz /oakd/rgb/preview/image_raw --window 10
+}
+
+bbox_rate_cmd() {
+  timeout 8 ros2 topic hz /detections --window 10
+}
+
+depth_cam_rate_cmd() {
+  timeout 8 ros2 topic hz /oakd/stereo/image_raw --window 10
+}
+
+robot_depth_cam_rate_cmd() {
+  ssh -t ubuntu@turtlebot4 "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp && export FASTRTPS_DEFAULT_PROFILES_FILE=/etc/turtlebot4/fastdds_rpi.xml && source /etc/turtlebot4/setup.bash && timeout 30 ros2 topic hz /oakd/stereo/image_raw --window 10 2>&1"
+}
+
+pointcloud_topic_cmd() {
+  timeout 8 ros2 topic hz /oakd/stereo/points --window 10
+}
+
+cam_info_topic_cmd() {
+  timeout 8 ros2 topic hz /oakd/stereo/camera_info --window 10
+}
+
+obstacles_cmd() {
+  timeout 8 ros2 topic hz /semantic_obstacles --window 10
+}
+
+battery_cmd() {
+  ros2 topic echo /battery_state --once 2>&1 | head -10
+}
+
+clicked_point_cmd() {
+  ros2 topic echo /clicked_point
+}
+
+cat_cmd() {
+  local file="$1"
+  if [ -z "$file" ]; then
+    echo "Error: no file path specified."
+    echo "Usage: tb4 cat <remote_file_path>"
+    exit 1
+  fi
+  ssh -t ubuntu@turtlebot4 "cat '$file'"
 }
 
 square_cmd() {
@@ -154,23 +245,29 @@ case "${1:-}" in
     ;;
   stop)
     shift
-    stop_cmd "$@"
+    case "${1:-}" in
+      svc) shift; stop_svc_cmd "$@" ;;
+      *) stop_cmd "$@" ;;
+    esac
     ;;
-  stop_lidar)
+  start)
     shift
-    stop_lidar_cmd "$@"
-    ;;
-  start_lidar)
-    shift
-    start_lidar_cmd "$@"
-    ;;
-  chk_power_save)
-    shift
-    chk_power_save_cmd "$@"
+    case "${1:-}" in
+      svc) shift; start_svc_cmd "$@" ;;
+      *) echo "Unknown start subcommand: ${1:-}"; echo "Usage: tb4 start svc"; exit 1 ;;
+    esac
     ;;
   restart)
     shift
     restart_cmd "$@"
+    ;;
+  reboot)
+    shift
+    reboot_cmd "$@"
+    ;;
+  login)
+    shift
+    login_cmd "$@"
     ;;
   status)
     shift
@@ -180,9 +277,53 @@ case "${1:-}" in
     shift
     off_cmd "$@"
     ;;
-  baseline1)
+  yolo)
     shift
-    baseline1_cmd "$@"
+    yolo_cmd "$@"
+    ;;
+  fusion)
+    shift
+    fusion_cmd "$@"
+    ;;
+  rgb_cam_rate)
+    shift
+    rgb_cam_rate_cmd "$@"
+    ;;
+  bbox_rate)
+    shift
+    bbox_rate_cmd "$@"
+    ;;
+  depth_cam_rate)
+    shift
+    depth_cam_rate_cmd "$@"
+    ;;
+  robot_depth_cam_rate)
+    shift
+    robot_depth_cam_rate_cmd "$@"
+    ;;
+  pointcloud_topic)
+    shift
+    pointcloud_topic_cmd "$@"
+    ;;
+  cam_info_topic)
+    shift
+    cam_info_topic_cmd "$@"
+    ;;
+  obstacles)
+    shift
+    obstacles_cmd "$@"
+    ;;
+  battery)
+    shift
+    battery_cmd "$@"
+    ;;
+  clicked_point)
+    shift
+    clicked_point_cmd "$@"
+    ;;
+  cat)
+    shift
+    cat_cmd "$@"
     ;;
   square)
     shift
