@@ -11,8 +11,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_dir = get_package_share_directory('tb4_perception_integration')
+    default_config = os.path.join(pkg_dir, 'config', 'fusion_params.yaml')
 
-    config_file = os.path.join(pkg_dir, 'config', 'fusion_params.yaml')
+    params_file_arg = DeclareLaunchArgument(
+        'params_file', default_value=default_config,
+        description='Full path to the fusion parameters YAML file')
 
     publish_debug_markers_arg = DeclareLaunchArgument(
         'publish_debug_markers', default_value='false',
@@ -23,12 +26,13 @@ def generate_launch_description():
         executable='camera_lidar_fusion_node',
         name='camera_lidar_fusion_node',
         output='screen',
-        parameters=[config_file, {
+        parameters=[LaunchConfiguration('params_file'), {
             'publish_debug_markers': LaunchConfiguration('publish_debug_markers'),
         }],
     )
 
     return LaunchDescription([
+        params_file_arg,
         publish_debug_markers_arg,
         fusion_node,
     ])
