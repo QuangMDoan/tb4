@@ -13,7 +13,10 @@
 # limitations under the License.
 #
 # @author Roni Kreinin (rkreinin@clearpathrobotics.com)
+# Modified: removed route_server to avoid DDS discovery timeout
 
+
+import os
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -21,13 +24,14 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     GroupAction,
-    IncludeLaunchDescription,
-    OpaqueFunction
+    OpaqueFunction,
+    TimerAction,
 )
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
-from launch_ros.actions import PushRosNamespace, SetRemap
+from launch_ros.actions import Node, PushRosNamespace, SetRemap
+
+from nav2_common.launch import RewrittenYaml
 
 
 ARGUMENTS = [
@@ -42,41 +46,163 @@ ARGUMENTS = [
                               ]),
                           description='Nav2 parameters'),
     DeclareLaunchArgument('namespace', default_value='',
-                          description='Robot namespace')
+                          description='Robot namespace'),
+    DeclareLaunchArgument('autostart', default_value='true',
+                          description='Automatically startup the nav2 stack'),
+    DeclareLaunchArgument('log_level', default_value='info',
+                          description='log level'),
 ]
 
 
 def launch_setup(context, *args, **kwargs):
-    pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
-
     nav2_params = LaunchConfiguration('params_file')
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    autostart = LaunchConfiguration('autostart')
+    log_level = LaunchConfiguration('log_level')
 
     namespace_str = namespace.perform(context)
-    if (namespace_str and not namespace_str.startswith('/')):
+    if namespace_str and not namespace_str.startswith('/'):
         namespace_str = '/' + namespace_str
 
-    launch_nav2 = PathJoinSubstitution(
-        [pkg_nav2_bringup, 'launch', 'navigation_launch.py'])
+    lifecycle_nodes = [
+        'controller_server',
+        'smoother_server',
+        'planner_server',
+        'behavior_server',
+        'velocity_smoother',
+        'collision_monitor',
+        'bt_navigator',
+        'waypoint_follower',
+        'docking_server',
+    ]
 
-    nav2 = GroupAction([
+    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+
+    param_substitutions = {'autostart': autostart}
+    configured_params = RewrittenYaml(
+        source_file=nav2_params.perform(context),
+        root_key=namespace_str,
+        param_rewrites=param_substitutions,
+        convert_types=True,
+    )
+
+    # Stagger node launches in batches to avoid overwhelming FastDDS
+    # discovery server when using SUPER_CLIENT mode.
+    common_group = [
         PushRosNamespace(namespace),
         SetRemap(namespace_str + '/global_costmap/scan', namespace_str + '/scan'),
         SetRemap(namespace_str + '/local_costmap/scan', namespace_str + '/scan'),
+    ]
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(launch_nav2),
-            launch_arguments=[
-                  ('use_sim_time', use_sim_time),
-                  ('params_file', nav2_params.perform(context)),
-                  ('use_composition', 'False'),
-                  ('namespace', namespace_str)
-                ]
+    batch1 = GroupAction(common_group + [
+        Node(
+            package='nav2_controller',
+            executable='controller_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
+        ),
+        Node(
+            package='nav2_smoother',
+            executable='smoother_server',
+            name='smoother_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_planner',
+            executable='planner_server',
+            name='planner_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
         ),
     ])
 
-    return [nav2]
+    batch2 = GroupAction(common_group + [
+        Node(
+            package='nav2_behaviors',
+            executable='behavior_server',
+            name='behavior_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
+        ),
+        Node(
+            package='nav2_bt_navigator',
+            executable='bt_navigator',
+            name='bt_navigator',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_waypoint_follower',
+            executable='waypoint_follower',
+            name='waypoint_follower',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+    ])
+
+    batch3 = GroupAction(common_group + [
+        Node(
+            package='nav2_velocity_smoother',
+            executable='velocity_smoother',
+            name='velocity_smoother',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
+        ),
+        Node(
+            package='nav2_collision_monitor',
+            executable='collision_monitor',
+            name='collision_monitor',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+    ])
+
+    batch4 = GroupAction(common_group + [
+        Node(
+            package='opennav_docking',
+            executable='opennav_docking',
+            name='docking_server',
+            output='screen',
+            parameters=[configured_params],
+            arguments=['--ros-args', '--log-level', log_level],
+            remappings=remappings,
+        ),
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_navigation',
+            output='screen',
+            arguments=['--ros-args', '--log-level', log_level],
+            parameters=[configured_params,
+                        {'autostart': autostart},
+                        {'node_names': lifecycle_nodes}],
+        ),
+    ])
+
+    return [
+        batch1,
+        TimerAction(period=3.0, actions=[batch2]),
+        TimerAction(period=6.0, actions=[batch3]),
+        TimerAction(period=9.0, actions=[batch4]),
+    ]
 
 
 def generate_launch_description():
