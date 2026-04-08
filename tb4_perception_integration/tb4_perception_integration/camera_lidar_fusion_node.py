@@ -78,7 +78,7 @@ def voxel_downsample(points, voxel_size):
     """Downsample point cloud by averaging points within each voxel.
 
     If voxel_downsample(pts, 0.05) is called before RANSAC then 
-    this typically reduces point count by ~10x on a 480x300 depth image 
+    this typically reduces point count by ~10x on a depth image 
     making RANSAC and all downstream steps faster"""
     if voxel_size <= 0 or points.shape[0] == 0:
         return points
