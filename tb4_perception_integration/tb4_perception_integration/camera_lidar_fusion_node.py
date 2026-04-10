@@ -4,29 +4,41 @@ Subscribes to YOLO Detection2DArray and a depth Image, fuses them to produce
 SemanticObstacleArray messages for the Nav2 perception costmap layer.
 
 Pipeline:
-  1. ApproximateTime-sync Detection2DArray + depth Image
-  2. Back-project depth pixels to 3-D points in camera optical frame
+  1. Cache latest Detection2DArray; pair with each incoming depth Image
+  2. Back-project depth pixels to 3D points in camera optical frame
   3. Voxel downsample + RANSAC floor-plane removal
-  4. Project surviving 3-D points to 2-D pixels, match YOLO bounding boxes
-  5. 1-D depth-gap clustering — select nearest compact cluster per box
-  6. Temporal tracking with EMA position smoothing
-  7. Publish SemanticObstacleArray for confirmed tracks + debug MarkerArray
+  4. Re-project surviving 3D points to 2D depth pixels
+  5. Transform YOLO bounding boxes from detection pixel space to depth
+     pixel space via normalized camera rays (dual K matrices)
+  6. Match transformed boxes to projected depth points
+  7. 1D depth-gap clustering, select nearest compact cluster per box
+  8. TF-transform cluster centroids from camera frame to odom
+  9. Temporal tracking with EMA position smoothing
+  10. Publish SemanticObstacleArray for confirmed tracks + debug MarkerArray
 
 Quick Test:
-    # Terminal 1  tb4 yolo viz 
-    # Terminal 2: tb4 fusion viz
-    # Terminal 3: ros2 topic echo /semantic_obstacles      
-    # Terminal 4 (optional): rviz2 with "odom" fixed frame, 
-        Add -> By topic -> /fusion_debug_markers -> MarkerArray 
-        Place a person, chair, or stop-sign in front of the camera
+    Terminal 1  tb4 yolo
+    Terminal 2: tb4 fusion viz
+    Terminal 3: ros2 topic echo /semantic_obstacles      
+    Terminal 4: tb4 viz
 
++──────────────────────────────────────────────────────────────────────────+
+| Launch fusion BEFORE nav2, so discovery settles before navigation starts |
++──────────────────────────────────────────────────────────────────────────+
+Full Test:
+    Terminal 1: tb4 localize
+    Terminal 2: tb4 yolo
+    Terminal 3: tb4 fusion          ← start early, before nav2
+    Terminal 4: tb4 viz
+    Terminal 5: tb4 nav2            ← start last
+    
 Perf Test:
-    # Terminal 1  tb4 yolo 
-    # Terminal 2: tb4 fusion
-    # Terminal 3: tb4 bbox_rate         (i.e. ros2 topic hz /detections )
-    # Terminal 4: tb4 depth_cam_rate    (i.e. ros2 topic hz /oakd/stereo/image_raw)
-    # Terminal 5: tb4 pointcloud_topic  (i.e. ros2 topic hz /oakd/stereo/points)
-    # Terminal 6: tb4 obstacles         (i.e. ros2 topic hz /semantic_obstacles)    
+    Terminal 1  tb4 yolo 
+    Terminal 2: tb4 fusion
+    Terminal 3: tb4 bbox_rate         (i.e. ros2 topic hz /detections )
+    Terminal 4: tb4 depth_cam_rate    (i.e. ros2 topic hz /oakd/stereo/image_raw)
+    Terminal 5: tb4 pointcloud_topic  (i.e. ros2 topic hz /oakd/stereo/points)
+    Terminal 6: tb4 obstacles         (i.e. ros2 topic hz /semantic_obstacles)    
 """
 
 import numpy as np
@@ -36,7 +48,6 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from rclpy.time import Time, Duration
 
-import message_filters
 import tf2_ros
 from tf2_ros import TransformException
 
@@ -172,12 +183,10 @@ class CameraLidarFusionNode(Node):
         self.det_topic = self.get_parameter('detection_topic').value
         self.depth_topic = self.get_parameter('depth_image_topic').value
         self.ci_topic = self.get_parameter('camera_info_topic').value
+        self.det_ci_topic = self.get_parameter('detection_camera_info_topic').value
         self.out_topic = self.get_parameter('output_topic').value
         self.marker_topic = self.get_parameter('marker_topic').value
         self.publish_markers = self.get_parameter('publish_debug_markers').value
-
-        self.sync_slop = self.get_parameter('sync_slop').value
-        self.sync_queue = self.get_parameter('sync_queue_size').value
 
         self.voxel_size = self.get_parameter('voxel_size').value
 
@@ -206,7 +215,8 @@ class CameraLidarFusionNode(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # ── CameraInfo (cached, not synced) ───────────────────────────
-        self.K = None  # 3×3 intrinsics
+        self.K = None  # 3×3 depth intrinsics
+        self.K_det = None  # 3×3 detection image intrinsics
         self.cam_frame = None
         self.img_w = 0
         self.img_h = 0
@@ -219,6 +229,10 @@ class CameraLidarFusionNode(Node):
             CameraInfo, self.ci_topic,
             self.camera_info_cb, sensor_qos)
 
+        self.det_ci_sub = self.create_subscription(
+            CameraInfo, self.det_ci_topic,
+            self.det_camera_info_cb, sensor_qos)
+
         # ── Publishers ────────────────────────────────────────────────
         self.obs_pub = self.create_publisher(
             SemanticObstacleArray, self.out_topic, 10)
@@ -229,20 +243,19 @@ class CameraLidarFusionNode(Node):
         else:
             self.marker_pub = None
 
-        # ── Synchronized subscribers ──────────────────────────────────
-        self.det_sub = message_filters.Subscriber(
-            self, Detection2DArray, self.det_topic,
-            qos_profile=10)
-        
-        self.depth_sub = message_filters.Subscriber(
-            self, Image, self.depth_topic,
-            qos_profile=sensor_qos)
+        # ── Independent subscribers (OAK-D RGB & stereo use different
+        #    timestamp bases, so ApproximateTimeSynchronizer cannot match
+        #    them well). Instead we cache the latest detections and pair 
+        #    them with each incoming depth frame.
+        self.latest_detections: Detection2DArray | None = None
 
-        self.sync = message_filters.ApproximateTimeSynchronizer(
-            [self.det_sub, self.depth_sub],
-            queue_size=self.sync_queue,
-            slop=self.sync_slop)
-        self.sync.registerCallback(self.synced_callback)
+        self.det_sub = self.create_subscription(
+            Detection2DArray, self.det_topic,
+            self.detection_cb, 10)
+
+        self.depth_sub = self.create_subscription(
+            Image, self.depth_topic,
+            self.depth_cb, sensor_qos)
 
         # ── Tracker state ─────────────────────────────────────────────
         self.tracks: list[dict] = []
@@ -252,6 +265,17 @@ class CameraLidarFusionNode(Node):
             f'CameraLidarFusionNode ready — '
             f'det={self.det_topic}, depth={self.depth_topic}, '
             f'out={self.out_topic}')
+
+    # ── Independent subscriber callbacks ─────────────────────────────
+
+    def detection_cb(self, msg: Detection2DArray):
+        self.latest_detections = msg
+
+    def depth_cb(self, depth_msg: Image):
+        det_msg = self.latest_detections
+        if det_msg is None:
+            return
+        self.synced_callback(det_msg, depth_msg)
 
     # ── CameraInfo cache ──────────────────────────────────────────────
 
@@ -264,10 +288,16 @@ class CameraLidarFusionNode(Node):
         self.img_w = msg.width
         self.img_h = msg.height
 
+    def det_camera_info_cb(self, msg: CameraInfo):
+        K = np.array(msg.k, dtype=np.float64).reshape(3, 3)
+        if np.all(K == 0):
+            return
+        self.K_det = K
+
     # ── Main synced callback ──────────────────────────────────────────
 
     def synced_callback(self, det_msg: Detection2DArray, depth_msg: Image):
-        if self.K is None:
+        if self.K is None or self.K_det is None:
             self.get_logger().warn(
                 'No CameraInfo received yet: skipping', throttle_duration_sec=5.0)
             return
@@ -280,7 +310,7 @@ class CameraLidarFusionNode(Node):
         fx, fy = self.K[0, 0], self.K[1, 1]
         cx, cy = self.K[0, 2], self.K[1, 2]
 
-        # (1) Convert depth image -> Nx3 points in camera frame
+        # (1) Convert depth image -> N points in camera frame
         if depth_msg.encoding == '16UC1':
             depth = np.frombuffer(depth_msg.data, dtype=np.uint16).reshape(
                 depth_msg.height, depth_msg.width).astype(np.float64) / 1000.0
@@ -342,6 +372,14 @@ class CameraLidarFusionNode(Node):
             return
 
         # (5) Match YOLO boxes -> projected points
+        #     YOLO boxes are in detection image pixel space (e.g. 250×250
+        #     RGB preview).  Depth reprojection uses stereo intrinsics
+        #     (e.g. 640×480).  Convert box corners via the two K matrices:
+        #       ray  = (u_det - cx_det) / fx_det
+        #       u_depth = ray * fx_depth + cx_depth
+        fx_det, fy_det = self.K_det[0, 0], self.K_det[1, 1]
+        cx_det, cy_det = self.K_det[0, 2], self.K_det[1, 2]
+
         new_detections: list[dict] = []
 
         for det in det_msg.detections:
@@ -355,10 +393,18 @@ class CameraLidarFusionNode(Node):
             by = det.bbox.center.position.y
             bw = det.bbox.size_x
             bh = det.bbox.size_y
-            x1 = bx - bw / 2.0
-            y1 = by - bh / 2.0
-            x2 = bx + bw / 2.0
-            y2 = by + bh / 2.0
+            
+            # Box corners in detection pixel space
+            dx1 = bx - bw / 2.0
+            dy1 = by - bh / 2.0
+            dx2 = bx + bw / 2.0
+            dy2 = by + bh / 2.0
+
+            # Transform to depth pixel space via normalised rays
+            x1 = (dx1 - cx_det) / fx_det * fx + cx
+            y1 = (dy1 - cy_det) / fy_det * fy + cy
+            x2 = (dx2 - cx_det) / fx_det * fx + cx
+            y2 = (dy2 - cy_det) / fy_det * fy + cy
 
             inside = (u >= x1) & (u <= x2) & (v >= y1) & (v <= y2)
             if int(np.sum(inside)) < self.min_pts:
@@ -400,7 +446,7 @@ class CameraLidarFusionNode(Node):
             tf_cam_odom = self.tf_buffer.lookup_transform(
                 odom_frame, cam_frame,
                 Time(),
-                timeout=Duration(seconds=0.1))
+                timeout=Duration(seconds=0.0))
         except TransformException as e:
             self.get_logger().warn(
                 f'TF {cam_frame}->{odom_frame}: {e}',

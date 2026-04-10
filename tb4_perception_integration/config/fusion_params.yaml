@@ -5,16 +5,13 @@ camera_lidar_fusion_node:
     detection_topic: '/detections'
     depth_image_topic: '/oakd/stereo/image_raw'
     camera_info_topic: '/oakd/stereo/camera_info'
+    detection_camera_info_topic: '/oakd/rgb/preview/camera_info'
     output_topic: '/semantic_obstacles'
     marker_topic: '/fusion_debug_markers'
     publish_debug_markers: false
 
-    # Time synchronization
-    sync_slop: 0.1
-    sync_queue_size: 10
-
     # Voxel downsampling (0 to disable)
-    voxel_size: 0
+    voxel_size: 0.05
 
     # RANSAC floor removal
     ransac_iterations: 50
