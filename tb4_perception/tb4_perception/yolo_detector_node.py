@@ -1,5 +1,11 @@
-"""
-YOLO Object Detection Node 
+"""YOLO Detector Node (v 0.02)
+
+Runs YOLOv8 inference on the OAK-D RGB preview stream: receives each
+camera frame, filters detections to a configurable set of target classes,
+and publishes 2D bounding boxes with class labels and confidence scores
+as a Detection2DArray for downstream fusion / planning nodes.
+Optionally publishes an annotated image with drawn bounding boxes for
+live visualization in RViz.
 
 Subscribes to /oakd/rgb/preview/image_raw
     Msg type: sensor_msgs/msg/Image

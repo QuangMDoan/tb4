@@ -1,6 +1,8 @@
-"""Camera-LiDAR Fusion Node (v 0.06)
+"""Camera-Depth Fusion Node (v 0.07)
 
-Subscribes to YOLO Detection2DArray and a depth Image, fuses them to produce
+Fuses YOLO 2D detections with stereo depth images: back-projects depth pixels
+to 3D, removes the floor plane via RANSAC, clusters remaining points inside
+each bounding box, and feeds tracked obstacle positions as
 SemanticObstacleArray messages for the Nav2 perception costmap layer.
 
 Pipeline:
