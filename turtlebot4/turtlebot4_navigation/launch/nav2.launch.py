@@ -199,9 +199,9 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         batch1,
-        TimerAction(period=3.0, actions=[batch2]),
-        TimerAction(period=6.0, actions=[batch3]),
-        TimerAction(period=9.0, actions=[batch4]),
+        TimerAction(period=5.0, actions=[batch2]),
+        TimerAction(period=10.0, actions=[batch3]),
+        TimerAction(period=15.0, actions=[batch4]),
     ]
 
 
