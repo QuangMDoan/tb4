@@ -44,13 +44,12 @@ from sensor_msgs.msg import Image, CameraInfo
 from vision_msgs.msg import Detection2DArray
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA, Header
-from geometry_msgs.msg import Point
 
 from tb4_perception_layer.msg import SemanticObstacle, SemanticObstacleArray
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def quaternion_matrix(quaternion):
-    """Return 4x4 homogeneous rotation matrix from quaternion [x, y, z, w]."""
+    """Return homogeneous rotation matrix from quaternion [x, y, z, w]."""
     x, y, z, w = quaternion
     tx, ty, tz = 2.0 * x, 2.0 * y, 2.0 * z
     wx, wy, wz = w * tx, w * ty, w * tz
@@ -75,12 +74,12 @@ def transform_to_matrix(transform):
 
     return T
 
-# If voxel_downsample(pts, 0.05) is called after NaN filtering and before RANSAC then 
-# this typically reduces point count by ~10x on a 480×300 depth image
-# making RANSAC and all downstream steps much faster
 def voxel_downsample(points, voxel_size):
-    """Downsample point cloud by averaging points within each voxel."""
+    """Downsample point cloud by averaging points within each voxel.
 
+    If voxel_downsample(pts, 0.05) is called before RANSAC then 
+    this typically reduces point count by ~10x on a 480x300 depth image 
+    making RANSAC and all downstream steps faster"""
     if voxel_size <= 0 or points.shape[0] == 0:
         return points
 
@@ -164,53 +163,12 @@ CLASS_COLORS = {
 class CameraLidarFusionNode(Node):
 
     def __init__(self):
-        super().__init__('camera_lidar_fusion_node')
+        super().__init__(
+            'camera_lidar_fusion_node',
+            automatically_declare_parameters_from_overrides=True,
+        )
 
-        # ── Parameters ────────────────────────────────────────────────
-        self.declare_parameter('detection_topic', '/detections')
-        self.declare_parameter('depth_image_topic',
-                               '/oakd/stereo/image_raw')
-        self.declare_parameter('camera_info_topic',
-                               '/oakd/stereo/camera_info')
-        self.declare_parameter('output_topic', '/semantic_obstacles')
-        self.declare_parameter('marker_topic', '/fusion_debug_markers')
-        self.declare_parameter('publish_debug_markers', False)
-
-        self.declare_parameter('sync_slop', 0.1)
-        self.declare_parameter('sync_queue_size', 10)
-
-        # Voxel downsampling
-        self.declare_parameter('voxel_size', 0.05)
-
-        # RANSAC
-        self.declare_parameter('ransac_iterations', 100)
-        self.declare_parameter('ransac_distance_threshold', 0.02)
-        self.declare_parameter('floor_normal_tolerance', 0.3)
-
-        # Matching / clustering
-        self.declare_parameter('min_cluster_points', 3)
-        self.declare_parameter('depth_gap_threshold', 0.3)
-        self.declare_parameter('max_obstacle_distance', 4.0)
-
-        # Tracking
-        self.declare_parameter('ema_alpha', 0.3)
-        self.declare_parameter('association_distance', 0.5)
-        self.declare_parameter('min_hits_to_confirm', 3)
-        self.declare_parameter('max_misses_to_delete', 5)
-        self.declare_parameter('track_timeout', 1.0)
-
-        # Class-specific config (parallel arrays)
-        self.declare_parameter('class_names', [
-            'person', 'chair', 'dog', 'cat', 'bicycle', 'stop sign',
-        ])
-        self.declare_parameter('class_radii', [
-            0.3, 0.25, 0.2, 0.15, 0.4, 0.15,
-        ])
-        self.declare_parameter('class_costs', [
-            254.0, 254.0, 200.0, 180.0, 254.0, 200.0,
-        ])
-
-        # Read all parameters
+        # ── Read parameters (declared via fusion_params.yaml) ─────────
         self.det_topic = self.get_parameter('detection_topic').value
         self.depth_topic = self.get_parameter('depth_image_topic').value
         self.ci_topic = self.get_parameter('camera_info_topic').value
@@ -264,6 +222,7 @@ class CameraLidarFusionNode(Node):
         # ── Publishers ────────────────────────────────────────────────
         self.obs_pub = self.create_publisher(
             SemanticObstacleArray, self.out_topic, 10)
+        
         if self.publish_markers:
             self.marker_pub = self.create_publisher(
                 MarkerArray, self.marker_topic, 10)
@@ -274,6 +233,7 @@ class CameraLidarFusionNode(Node):
         self.det_sub = message_filters.Subscriber(
             self, Detection2DArray, self.det_topic,
             qos_profile=10)
+        
         self.depth_sub = message_filters.Subscriber(
             self, Image, self.depth_topic,
             qos_profile=sensor_qos)
@@ -309,7 +269,7 @@ class CameraLidarFusionNode(Node):
     def synced_callback(self, det_msg: Detection2DArray, depth_msg: Image):
         if self.K is None:
             self.get_logger().warn(
-                'No CameraInfo received yet — skipping', throttle_duration_sec=5.0)
+                'No CameraInfo received yet: skipping', throttle_duration_sec=5.0)
             return
 
         if len(det_msg.detections) == 0:
@@ -320,7 +280,7 @@ class CameraLidarFusionNode(Node):
         fx, fy = self.K[0, 0], self.K[1, 1]
         cx, cy = self.K[0, 2], self.K[1, 2]
 
-        # (1) Convert depth image -> Nx3 points in camera optical frame
+        # (1) Convert depth image -> Nx3 points in camera frame
         if depth_msg.encoding == '16UC1':
             depth = np.frombuffer(depth_msg.data, dtype=np.uint16).reshape(
                 depth_msg.height, depth_msg.width).astype(np.float64) / 1000.0
@@ -338,7 +298,7 @@ class CameraLidarFusionNode(Node):
             np.arange(w, dtype=np.float64),
             np.arange(h, dtype=np.float64))
 
-        valid = (depth > 0) & np.isfinite(depth)
+        valid = (depth > 0) & np.isfinite(depth)  
         Z = depth[valid]
         u_px = u_grid[valid]
         v_px = v_grid[valid]

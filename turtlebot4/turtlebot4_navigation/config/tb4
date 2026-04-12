@@ -28,6 +28,9 @@ Usage:
   tb4 status
   tb4 login
   tb4 off
+  tb4 localize [map_yaml]
+  tb4 nav2
+  tb4 viz
   tb4 yolo
   tb4 yolo viz
   tb4 fusion
@@ -60,6 +63,9 @@ Examples:
   tb4 status
   tb4 login
   tb4 off
+  tb4 localize
+  tb4 nav2
+  tb4 viz
   tb4 yolo
   tb4 yolo viz
   tb4 fusion
@@ -150,6 +156,20 @@ off_cmd() {
   ros2 service call /robot_power irobot_create_msgs/srv/RobotPower "{}"
 }
 
+localize_cmd() {
+  local map="${1:-$HOME/turtlebot4_ws/map_101.yaml}"
+  ros2 launch turtlebot4_navigation localization.launch.py map:="$map"
+}
+
+nav2_cmd() {
+  local params_file="$HOME/turtlebot4_ws/src/turtlebot4/turtlebot4_navigation/config/nav2.yaml"
+  ros2 launch turtlebot4_navigation nav2.launch.py params_file:="$params_file"
+}
+
+viz_cmd() {
+  ros2 launch turtlebot4_viz view_navigation.launch.py
+}
+
 yolo_cmd() {
   if [ "${1:-}" = "viz" ]; then
     ros2 launch tb4_perception yolo_detector.launch.py publish_visualisation:=true
@@ -159,10 +179,11 @@ yolo_cmd() {
 }
 
 fusion_cmd() {
+  local params_file="$HOME/turtlebot4_ws/src/tb4_perception_integration/config/fusion_params.yaml"
   if [ "${1:-}" = "viz" ]; then
-    ros2 launch tb4_perception_integration perception_integration.launch.py publish_debug_markers:=true
+    ros2 launch tb4_perception_integration perception_integration.launch.py params_file:="$params_file" publish_debug_markers:=true
   else
-    ros2 launch tb4_perception_integration perception_integration.launch.py
+    ros2 launch tb4_perception_integration perception_integration.launch.py params_file:="$params_file"
   fi
 }
 
@@ -276,6 +297,18 @@ case "${1:-}" in
   off)
     shift
     off_cmd "$@"
+    ;;
+  localize)
+    shift
+    localize_cmd "$@"
+    ;;
+  nav2)
+    shift
+    nav2_cmd "$@"
+    ;;
+  viz)
+    shift
+    viz_cmd "$@"
     ;;
   yolo)
     shift
