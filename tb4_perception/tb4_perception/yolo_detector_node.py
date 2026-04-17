@@ -63,7 +63,7 @@ class YoloDetectorNode(Node):
         self.declare_parameter('image_topic', '/oakd/rgb/preview/image_raw')
         self.declare_parameter('detection_topic', '/detections')
         self.declare_parameter('device', 'cpu')
-        self.declare_parameter('publish_rate_limit', 30.0)
+        self.declare_parameter('publish_rate_limit', 15.0)
         self.declare_parameter('target_classes', [
             'person', 'stop sign', 'chair', 'dog', 'cat', 'bicycle',
         ])

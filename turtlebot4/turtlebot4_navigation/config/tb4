@@ -31,6 +31,7 @@ Usage:
   tb4 localize [map_yaml]
   tb4 nav2
   tb4 viz
+  tb4 viz lite
   tb4 yolo
   tb4 yolo viz
   tb4 fusion
@@ -66,6 +67,7 @@ Examples:
   tb4 localize
   tb4 nav2
   tb4 viz
+  tb4 viz lite
   tb4 yolo
   tb4 yolo viz
   tb4 fusion
@@ -168,6 +170,11 @@ nav2_cmd() {
 
 viz_cmd() {
   ros2 launch turtlebot4_viz view_navigation.launch.py
+}
+
+viz_lite_cmd() {
+  local rviz_config="$HOME/turtlebot4_ws/src/turtlebot4_desktop/turtlebot4_viz/rviz/navigation_lite.rviz"
+  ros2 run rviz2 rviz2 -d "$rviz_config"
 }
 
 yolo_cmd() {
@@ -308,7 +315,20 @@ case "${1:-}" in
     ;;
   viz)
     shift
-    viz_cmd "$@"
+    case "${1:-}" in
+      lite)
+        shift
+        viz_lite_cmd "$@"
+        ;;
+      "")
+        viz_cmd "$@"
+        ;;
+      *)
+        echo "Unknown viz subcommand: ${1:-}"
+        echo "Usage: tb4 viz [lite]"
+        exit 1
+        ;;
+    esac
     ;;
   yolo)
     shift
